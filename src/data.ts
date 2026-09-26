@@ -2,11 +2,11 @@ export type Difficulty = 'Easy' | 'Medium' | 'Hard'
 export type ProblemStatus = 'NOT_STARTED' | 'ATTEMPTED' | 'SOLVED'
 export type Importance = 'Essential' | 'Important' | 'Practice'
 
-export type Subtopic = { id: string; name: string }
-export type Topic = { id: string; name: string; icon: string; subtopics: Subtopic[] }
+export type Concept = { id: string; name: string }
+export type Topic = { id: string; name: string; icon: string; concepts: Concept[] }
 export type Problem = {
   id: string; number: string; title: string; platform: 'LeetCode'; url: string
-  difficulty: Difficulty; topicId: string; subtopicId: string; xp: number; order: number
+  difficulty: Difficulty; topicId: string; conceptId: string; xp: number; order: number
   importance?: Importance; source?: 'seed' | 'bank' | 'admin'; tags?: string[]; published?: boolean
 }
 export type Progress = {
@@ -19,7 +19,7 @@ export const topics: Topic[] = [
     "id": "arrays",
     "name": "Arrays",
     "icon": "▦",
-    "subtopics": [
+    "concepts": [
       {
         "id": "arrays-1",
         "name": "Array Basics"
@@ -70,7 +70,7 @@ export const topics: Topic[] = [
     "id": "strings",
     "name": "Strings",
     "icon": "Aa",
-    "subtopics": [
+    "concepts": [
       {
         "id": "strings-1",
         "name": "String Basics"
@@ -113,7 +113,7 @@ export const topics: Topic[] = [
     "id": "linked-list",
     "name": "Linked List",
     "icon": "↔",
-    "subtopics": [
+    "concepts": [
       {
         "id": "linked-list-1",
         "name": "Singly Linked List"
@@ -156,7 +156,7 @@ export const topics: Topic[] = [
     "id": "stack-queue",
     "name": "Stack & Queue",
     "icon": "▤",
-    "subtopics": [
+    "concepts": [
       {
         "id": "stack-queue-1",
         "name": "Stack Basics"
@@ -199,7 +199,7 @@ export const topics: Topic[] = [
     "id": "hashing",
     "name": "Hashing",
     "icon": "#",
-    "subtopics": [
+    "concepts": [
       {
         "id": "hashing-1",
         "name": "HashMap"
@@ -234,7 +234,7 @@ export const topics: Topic[] = [
     "id": "recursion",
     "name": "Recursion",
     "icon": "↻",
-    "subtopics": [
+    "concepts": [
       {
         "id": "recursion-1",
         "name": "Basic Recursion"
@@ -265,7 +265,7 @@ export const topics: Topic[] = [
     "id": "backtracking",
     "name": "Backtracking",
     "icon": "⌁",
-    "subtopics": [
+    "concepts": [
       {
         "id": "backtracking-1",
         "name": "Subsets"
@@ -308,7 +308,7 @@ export const topics: Topic[] = [
     "id": "trees",
     "name": "Trees",
     "icon": "⌁",
-    "subtopics": [
+    "concepts": [
       {
         "id": "trees-1",
         "name": "Binary Tree Basics"
@@ -351,7 +351,7 @@ export const topics: Topic[] = [
     "id": "binary-search",
     "name": "Binary Search",
     "icon": "⌕",
-    "subtopics": [
+    "concepts": [
       {
         "id": "binary-search-1",
         "name": "Binary Search Basics"
@@ -386,7 +386,7 @@ export const topics: Topic[] = [
     "id": "heap",
     "name": "Heap / Priority Queue",
     "icon": "△",
-    "subtopics": [
+    "concepts": [
       {
         "id": "heap-1",
         "name": "Heap Basics"
@@ -429,7 +429,7 @@ export const topics: Topic[] = [
     "id": "graphs",
     "name": "Graphs",
     "icon": "◎",
-    "subtopics": [
+    "concepts": [
       {
         "id": "graphs-1",
         "name": "Graph Representation"
@@ -500,7 +500,7 @@ export const topics: Topic[] = [
     "id": "greedy",
     "name": "Greedy",
     "icon": "↗",
-    "subtopics": [
+    "concepts": [
       {
         "id": "greedy-1",
         "name": "Greedy Basics"
@@ -543,7 +543,7 @@ export const topics: Topic[] = [
     "id": "dp",
     "name": "Dynamic Programming",
     "icon": "◫",
-    "subtopics": [
+    "concepts": [
       {
         "id": "dp-1",
         "name": "DP Basics"
@@ -598,7 +598,7 @@ export const topics: Topic[] = [
     "id": "trie",
     "name": "Trie",
     "icon": "⌘",
-    "subtopics": [
+    "concepts": [
       {
         "id": "trie-1",
         "name": "Trie Basics"
@@ -629,7 +629,7 @@ export const topics: Topic[] = [
     "id": "bit",
     "name": "Bit Manipulation",
     "icon": "◈",
-    "subtopics": [
+    "concepts": [
       {
         "id": "bit-1",
         "name": "AND / OR / XOR"
@@ -672,7 +672,7 @@ export const topics: Topic[] = [
     "id": "sliding-window",
     "name": "Sliding Window",
     "icon": "□",
-    "subtopics": [
+    "concepts": [
       {
         "id": "sliding-window-1",
         "name": "Fixed Window"
@@ -703,7 +703,7 @@ export const topics: Topic[] = [
     "id": "two-pointers",
     "name": "Two Pointers",
     "icon": "↔",
-    "subtopics": [
+    "concepts": [
       {
         "id": "two-pointers-1",
         "name": "Opposite Direction"
@@ -738,7 +738,7 @@ export const topics: Topic[] = [
     "id": "divide-conquer",
     "name": "Divide & Conquer",
     "icon": "÷",
-    "subtopics": [
+    "concepts": [
       {
         "id": "divide-conquer-1",
         "name": "Merge Sort"
@@ -769,7 +769,7 @@ export const topics: Topic[] = [
     "id": "advanced",
     "name": "Advanced DSA",
     "icon": "◇",
-    "subtopics": [
+    "concepts": [
       {
         "id": "advanced-1",
         "name": "Disjoint Set Union"

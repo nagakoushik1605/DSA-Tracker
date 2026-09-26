@@ -4,13 +4,13 @@ import { Search, X } from 'lucide-react'
 import { topics, type Difficulty, type Problem, type Progress } from './data'
 import { addAttempt, markRevision, toggleSolved } from './progress'
 import { changePassword, isSupabaseConfigured, listenForAuthChanges, loginAdmin, logoutAdmin, restoreAdminSession, type AppUser } from './auth'
-import { createProblem, deleteProblem, fetchProblems, updateProblemPublished } from './api'
+import { createProblemsBulk, deleteProblem, fetchProblems, updateProblemPublished } from './api'
 import { clearProgress, loadProgress, saveProgress } from './storage'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
 import { TopicProgress } from './components/TopicProgress'
 import { ProblemRow } from './components/ProblemRow'
-import { AdminProblemForm, type AdminFormState } from './components/AdminProblemForm'
+import { AdminProblemForm } from './components/AdminProblemForm'
 import { AdminProblemTable } from './components/AdminProblemTable'
 import './styles.css'
 
@@ -146,7 +146,7 @@ function PublicTracker({ problems, loading, setupError, onAdmin, onRefresh }: {
     const q = search.trim().toLowerCase()
     const pr = progress[p.id]
     const matchesSearch = !q || `${p.title} ${p.difficulty}`.toLowerCase().includes(q)
-    const matchesConcept = activeConcept === 'all' || p.subtopicId === activeConcept
+    const matchesConcept = activeConcept === 'all' || p.conceptId === activeConcept
     const matchesStatus = statusFilter === 'ALL'
       || (statusFilter === 'REVISION' && pr?.revisionRequired)
       || (statusFilter === 'SOLVED' && pr?.status === 'SOLVED')
@@ -171,8 +171,8 @@ function PublicTracker({ problems, loading, setupError, onAdmin, onRefresh }: {
 
   const overallPct = problems.length ? Math.round(solved.length / problems.length * 100) : 0
   const currentTopicProgress = topicProgress(topic.id)
-  const conceptDone = (subtopicId: string) => topicProblems.filter(p => p.subtopicId === subtopicId && progress[p.id]?.status === 'SOLVED').length
-  const conceptTotal = (subtopicId: string) => topicProblems.filter(p => p.subtopicId === subtopicId).length
+  const conceptDone = (conceptId: string) => topicProblems.filter(p => p.conceptId === conceptId && progress[p.id]?.status === 'SOLVED').length
+  const conceptTotal = (conceptId: string) => topicProblems.filter(p => p.conceptId === conceptId).length
 
   return (
     <div className="app-shell">
@@ -203,10 +203,10 @@ function PublicTracker({ problems, loading, setupError, onAdmin, onRefresh }: {
             <>
               <TopicProgress name={topic.name} done={currentTopicProgress.done} total={currentTopicProgress.total} />
 
-              {topic.subtopics.length > 0 && (
+              {topic.concepts.length > 0 && (
                 <div className="concept-chips">
                   <button className={`chip ${activeConcept === 'all' ? 'active' : ''}`} onClick={() => setActiveConcept('all')}>All concepts</button>
-                  {topic.subtopics.map(s => (
+                  {topic.concepts.map(s => (
                     <button key={s.id} className={`chip ${activeConcept === s.id ? 'active' : ''}`} onClick={() => setActiveConcept(s.id)}>
                       {s.name} <span className="chip-count">{conceptDone(s.id)}/{conceptTotal(s.id)}</span>
                     </button>
@@ -248,7 +248,7 @@ function PublicTracker({ problems, loading, setupError, onAdmin, onRefresh }: {
                       <ProblemRow
                         key={p.id}
                         p={p}
-                        concept={topic.subtopics.find(s => s.id === p.subtopicId)?.name}
+                        concept={topic.concepts.find(s => s.id === p.conceptId)?.name}
                         progress={progress[p.id]}
                         isNext={firstIncomplete?.id === p.id}
                         onToggle={handleToggle}
@@ -271,43 +271,110 @@ function PublicTracker({ problems, loading, setupError, onAdmin, onRefresh }: {
 function AdminConsole({ admin, problems, setProblems, onLogout }: {
   admin: AppUser; problems: Problem[]; setProblems: React.Dispatch<React.SetStateAction<Problem[]>>; onLogout: () => void
 }) {
-  const [form, setForm] = useState<AdminFormState>({ title: '', difficulty: 'Easy', topicId: 'trees', subtopicId: 'trees-1', importance: 'Important', published: true })
+  const [topicId, setTopicId] = useState('trees')
+  const [fileName, setFileName] = useState('')
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   const visible = problems.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
-  const showToast = (m: string) => { setToast(m); window.setTimeout(() => setToast(null), 2400) }
+  const showToast = (m: string) => { setToast(m); window.setTimeout(() => setToast(null), 3000) }
 
-  const updateTopic = (id: string) => {
-    const t = topics.find(x => x.id === id) ?? topics[0]
-    setForm(f => ({ ...f, topicId: t.id, subtopicId: t.subtopics[0]?.id ?? '' }))
-  }
-
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.title.trim()) return
+  const uploadExcel = async (file: File) => {
     setBusy(true)
+    setFileName(file.name)
     try {
-      const id = `problem-${crypto.randomUUID()}`
-      const order = problems.length + 1
-      const url = leetcodeUrl(form.title)
-      const p: Problem = {
-        id, number: `P${order}`, title: form.title.trim(), platform: 'LeetCode', url,
-        difficulty: form.difficulty, topicId: form.topicId, subtopicId: form.subtopicId,
-        xp: form.difficulty === 'Easy' ? 10 : form.difficulty === 'Medium' ? 20 : 30,
-        order, importance: form.importance, source: 'admin', tags: [], published: form.published,
-      }
-      await createProblem({ ...p, published: form.published })
-      setProblems(prev => [...prev, p])
-      setForm(f => ({ ...f, title: '' }))
-      showToast('Problem added')
+      const { readExcelProblems } = await import('./excel')
+      const rows = await readExcelProblems(file)
+      if (!rows.length) throw new Error('The Excel sheet has no problem rows.')
+
+      const topic = topics.find(t => t.id === topicId) ?? topics[0]
+      const conceptByName = new Map(topic.concepts.map(c => [c.name.trim().toLowerCase(), c]))
+      const conceptById = new Map(topic.concepts.map(c => [c.id, c]))
+
+      const errors: string[] = []
+      const existingTitles = new Set(problems.map(p => p.title.trim().toLowerCase()))
+      const existingUrls = new Set(problems.map(p => p.url.trim().toLowerCase()))
+      const startOrder = problems.reduce((max, p) => Math.max(max, Number(p.order) || 0), 0)
+      const newProblems: Problem[] = []
+
+      rows.forEach((row, index) => {
+        const line = index + 2
+        const title = row.title.trim()
+        if (!title) { errors.push(`Row ${line}: Title is required.`); return }
+
+        const conceptKey = row.concept.trim().toLowerCase()
+        const concept = conceptByName.get(conceptKey) ?? conceptById.get(row.concept.trim())
+        if (!concept) {
+          errors.push(`Row ${line}: Concept "${row.concept}" does not exist under ${topic.name}.`)
+          return
+        }
+
+        const difficulty = row.difficulty.trim() as Difficulty
+        if (!['Easy', 'Medium', 'Hard'].includes(difficulty)) {
+          errors.push(`Row ${line}: Difficulty must be Easy, Medium, or Hard.`)
+          return
+        }
+
+        const importance = (row.importance.trim() || 'Important') as 'Essential' | 'Important' | 'Practice'
+        if (!['Essential', 'Important', 'Practice'].includes(importance)) {
+          errors.push(`Row ${line}: Importance must be Essential, Important, or Practice.`)
+          return
+        }
+
+        const url = row.url.trim() || leetcodeUrl(title)
+        if (existingTitles.has(title.toLowerCase())) {
+          errors.push(`Row ${line}: "${title}" already exists.`)
+          return
+        }
+        if (existingUrls.has(url.toLowerCase())) {
+          errors.push(`Row ${line}: URL already exists.`)
+          return
+        }
+
+        const order = startOrder + newProblems.length + 1
+        const problem: Problem = {
+          id: `problem-${crypto.randomUUID()}`,
+          number: row.number.trim() || `P${order}`,
+          title,
+          platform: 'LeetCode',
+          url,
+          difficulty,
+          topicId: topic.id,
+          conceptId: concept.id,
+          xp: row.xp ? Number(row.xp) : difficulty === 'Easy' ? 10 : difficulty === 'Medium' ? 20 : 30,
+          order,
+          importance,
+          source: 'admin',
+          tags: row.tags ? row.tags.split(',').map(x => x.trim()).filter(Boolean) : [],
+          published: row.published === '' ? true : !['false', '0', 'no', 'hidden'].includes(row.published.toLowerCase()),
+        }
+        newProblems.push(problem)
+        existingTitles.add(title.toLowerCase())
+        existingUrls.add(url.toLowerCase())
+      })
+
+      if (errors.length) throw new Error(errors.slice(0, 8).join(' ') + (errors.length > 8 ? ` + ${errors.length - 8} more errors.` : ''))
+      await createProblemsBulk(newProblems.map(p => ({ ...p, published: p.published !== false })))
+      setProblems(prev => [...prev, ...newProblems])
+      showToast(`${newProblems.length} problems uploaded to ${topic.name}`)
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Could not add problem')
+      showToast(err instanceof Error ? err.message : 'Could not upload Excel file')
     } finally {
       setBusy(false)
     }
+  }
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.currentTarget.value = ''
+    if (!file) return
+    if (!/\.xlsx$/i.test(file.name)) {
+      showToast('Please upload an Excel file (.xlsx).')
+      return
+    }
+    void uploadExcel(file)
   }
 
   const remove = async (p: Problem) => {
@@ -330,18 +397,13 @@ function AdminConsole({ admin, problems, setProblems, onLogout }: {
 
   return (
     <div className="admin-only-page">
-      <Header
-        variant="admin"
-        adminEmail={admin.email}
-        onChangePassword={() => setPasswordOpen(true)}
-        onLogout={onLogout}
-      />
+      <Header variant="admin" adminEmail={admin.email} onChangePassword={() => setPasswordOpen(true)} onLogout={onLogout} />
       <main className="admin-main">
         <div className="admin-title">
           <div>
-            <div className="eyebrow">Admin · Problem insertion</div>
-            <h1>Insert problems.</h1>
-            <p>Add problems from your curated DSA problem list.</p>
+            <div className="eyebrow">Admin · Excel problem upload</div>
+            <h1>Upload problems.</h1>
+            <p>Select one topic and upload one Excel sheet containing all its problems.</p>
           </div>
           <div className="admin-count">{problems.length} total</div>
         </div>
@@ -349,15 +411,11 @@ function AdminConsole({ admin, problems, setProblems, onLogout }: {
         <section className="panel admin-panel">
           <AdminProblemForm
             topics={topics}
-            form={form}
+            topicId={topicId}
+            fileName={fileName}
             busy={busy}
-            onTitleChange={title => setForm(f => ({ ...f, title }))}
-            onTopicChange={updateTopic}
-            onSubtopicChange={subtopicId => setForm(f => ({ ...f, subtopicId }))}
-            onDifficultyChange={difficulty => setForm(f => ({ ...f, difficulty }))}
-            onImportanceChange={importance => setForm(f => ({ ...f, importance }))}
-            onPublishedChange={published => setForm(f => ({ ...f, published }))}
-            onSubmit={add}
+            onTopicChange={setTopicId}
+            onFileChange={onFileChange}
           />
         </section>
 

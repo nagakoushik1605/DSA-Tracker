@@ -16,7 +16,7 @@ export async function fetchProblems(): Promise<Problem[]> {
     url: p.url,
     difficulty: p.difficulty,
     topicId: p.topic_id,
-    subtopicId: p.subtopic_id,
+    conceptId: p.subtopic_id,
     xp: p.xp,
     order: p.sort_order,
     importance: p.importance ?? undefined,
@@ -36,7 +36,7 @@ export async function createProblem(input: Omit<Problem, 'source'> & { published
     url: input.url,
     difficulty: input.difficulty,
     topic_id: input.topicId,
-    subtopic_id: input.subtopicId,
+    subtopic_id: input.conceptId,
     xp: input.xp,
     sort_order: input.order,
     importance: input.importance ?? null,
@@ -90,5 +90,32 @@ export async function saveProgressItem(userId: string, problemId: string, progre
     last_attempt_at: progress.lastAttemptAt ?? null,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id,problem_id' })
+  if (error) throw new Error(error.message)
+}
+
+
+export type BulkProblemInput = Omit<Problem, 'source'>
+
+export async function createProblemsBulk(inputs: Array<BulkProblemInput & { published: boolean }>) {
+  if (!supabase) throw new Error('Supabase is not configured.')
+  if (!inputs.length) return
+
+  const rows = inputs.map(input => ({
+    id: input.id,
+    number: input.number,
+    title: input.title,
+    platform: input.platform,
+    url: input.url,
+    difficulty: input.difficulty,
+    topic_id: input.topicId,
+    subtopic_id: input.conceptId,
+    xp: input.xp,
+    sort_order: input.order,
+    importance: input.importance ?? null,
+    tags: input.tags ?? [],
+    is_published: input.published,
+  }))
+
+  const { error } = await supabase.from('problems').insert(rows)
   if (error) throw new Error(error.message)
 }

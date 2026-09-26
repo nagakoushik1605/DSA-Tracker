@@ -1,92 +1,63 @@
-import { Plus } from 'lucide-react'
-import type { Difficulty, Importance, Topic } from '../data'
-
-export type AdminFormState = {
-  title: string
-  difficulty: Difficulty
-  topicId: string
-  subtopicId: string
-  importance: Importance
-  published: boolean
-}
+import { FileSpreadsheet, Upload } from 'lucide-react'
+import type { Topic } from '../data'
 
 export function AdminProblemForm({
   topics,
-  form,
+  topicId,
+  fileName,
   busy,
-  onTitleChange,
   onTopicChange,
-  onSubtopicChange,
-  onDifficultyChange,
-  onImportanceChange,
-  onPublishedChange,
-  onSubmit,
+  onFileChange,
 }: {
   topics: Topic[]
-  form: AdminFormState
+  topicId: string
+  fileName: string
   busy: boolean
-  onTitleChange: (v: string) => void
   onTopicChange: (id: string) => void
-  onSubtopicChange: (id: string) => void
-  onDifficultyChange: (d: Difficulty) => void
-  onImportanceChange: (i: Importance) => void
-  onPublishedChange: (v: boolean) => void
-  onSubmit: (e: React.FormEvent) => void
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }) {
-  const topic = topics.find(t => t.id === form.topicId) ?? topics[0]
-
   return (
-    <form className="admin-form" onSubmit={onSubmit}>
-      <label className="admin-form-title">
-        Problem title
-        <input
-          value={form.title}
-          onChange={e => onTitleChange(e.target.value)}
-          placeholder="Enter the exact LeetCode problem title"
-          required
-        />
-        <span className="field-hint">The LeetCode link is generated automatically from this title.</span>
-      </label>
+    <div className="admin-form">
+      <div className="excel-upload-head">
+        <div>
+          <h2>Upload an Excel sheet</h2>
+          <p>One upload adds every problem in the sheet to the selected topic.</p>
+        </div>
+        <div className="excel-icon"><FileSpreadsheet size={22} /></div>
+      </div>
 
-      <div className="admin-form-grid">
+      <div className="admin-form-grid excel-upload-grid">
         <label>
           Topic
-          <select value={form.topicId} onChange={e => onTopicChange(e.target.value)}>
+          <select value={topicId} onChange={e => onTopicChange(e.target.value)} disabled={busy}>
             {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </label>
-        <label>
-          Concept
-          <select value={form.subtopicId} onChange={e => onSubtopicChange(e.target.value)}>
-            {topic.subtopics.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </label>
-        <label>
-          Difficulty
-          <select value={form.difficulty} onChange={e => onDifficultyChange(e.target.value as Difficulty)}>
-            <option>Easy</option>
-            <option>Medium</option>
-            <option>Hard</option>
-          </select>
-        </label>
-        <label>
-          Importance
-          <select value={form.importance} onChange={e => onImportanceChange(e.target.value as Importance)}>
-            <option>Essential</option>
-            <option>Important</option>
-            <option>Practice</option>
-          </select>
-        </label>
+
+        <div className="excel-format-note">
+          <span>Excel format</span>
+          <strong>.xlsx</strong>
+          <small>One sheet · one row per problem</small>
+        </div>
       </div>
 
-      <label className="publish-check">
-        <input type="checkbox" checked={form.published} onChange={e => onPublishedChange(e.target.checked)} />
-        Show this problem to users immediately
-      </label>
+      <div className="excel-template-box">
+        <strong>Required columns:</strong> Title, Concept, Difficulty
+        <br />
+        <span>Optional: Number, Importance, URL, XP, Published, Tags</span>
+        <br />
+        <span>Concept must exactly match one of the concepts under the selected topic.</span>
+      </div>
 
-      <button className="primary-btn add-problem-btn" disabled={busy}>
-        <Plus size={16} />{busy ? 'Adding…' : 'Add problem'}
-      </button>
-    </form>
+      {fileName && <div className="selected-file"><FileSpreadsheet size={15} /> {fileName}</div>}
+
+      <div className="excel-upload-action">
+        <label className={`primary-btn upload-label ${busy ? 'disabled' : ''}`}>
+          <Upload size={16} />
+          {busy ? 'Uploading…' : 'Choose Excel & Upload'}
+          <input type="file" accept=".xlsx" onChange={onFileChange} disabled={busy} />
+        </label>
+      </div>
+    </div>
   )
 }

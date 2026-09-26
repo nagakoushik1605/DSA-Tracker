@@ -18,8 +18,8 @@ export function AdminProblemTable({
   onDelete: (p: Problem) => void
 }) {
   const topicName = (id: string) => topics.find(t => t.id === id)?.name ?? id
-  const conceptName = (topicId: string, subtopicId: string) =>
-    topics.find(t => t.id === topicId)?.subtopics.find(s => s.id === subtopicId)?.name ?? subtopicId
+  const conceptName = (topicId: string, conceptId: string) =>
+    topics.find(t => t.id === topicId)?.concepts.find(c => c.id === conceptId)?.name ?? conceptId
 
   return (
     <section className="panel admin-panel">
@@ -48,7 +48,7 @@ export function AdminProblemTable({
             <div className="admin-table-row" key={p.id}>
               <div className="admin-row-title">{p.title}</div>
               <div className="admin-row-cell">{topicName(p.topicId)}</div>
-              <div className="admin-row-cell">{conceptName(p.topicId, p.subtopicId)}</div>
+              <div className="admin-row-cell">{conceptName(p.topicId, p.conceptId)}</div>
               <div className="admin-row-cell"><DifficultyBadge difficulty={p.difficulty} /></div>
               <div className="admin-row-cell">
                 <button
