@@ -9,6 +9,8 @@ export function AdminProblemTable({
   onSearchChange,
   onTogglePublished,
   onDelete,
+  onDeleteAll,
+  busy,
 }: {
   problems: Problem[]
   topics: Topic[]
@@ -16,6 +18,8 @@ export function AdminProblemTable({
   onSearchChange: (v: string) => void
   onTogglePublished: (p: Problem) => void
   onDelete: (p: Problem) => void
+  onDeleteAll: () => void
+  busy?: boolean
 }) {
   const topicName = (id: string) => topics.find(t => t.id === id)?.name ?? id
   const conceptName = (topicId: string, conceptId: string) =>
@@ -28,6 +32,9 @@ export function AdminProblemTable({
           <h2>Inserted problems</h2>
           <p>Only published problems appear on the student tracker.</p>
         </div>
+        <button className="delete-all-btn" onClick={onDeleteAll} disabled={busy || !problems.length} title="Remove every problem under the selected topic">
+          <Trash2 size={15} /> Remove all ({problems.length})
+        </button>
         <div className="search-box">
           <Search size={15} />
           <input value={search} onChange={e => onSearchChange(e.target.value)} placeholder="Search problems…" />

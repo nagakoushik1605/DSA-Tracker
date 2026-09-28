@@ -309,43 +309,55 @@ export const topics: Topic[] = [
     "name": "Trees",
     "icon": "⌁",
     "concepts": [
-      {
-        "id": "trees-1",
-        "name": "Binary Tree Basics"
-      },
-      {
-        "id": "trees-2",
-        "name": "Tree Traversals"
-      },
-      {
-        "id": "trees-3",
-        "name": "Tree Properties"
-      },
-      {
-        "id": "trees-4",
-        "name": "Tree Views"
-      },
-      {
-        "id": "trees-5",
-        "name": "Tree Path Problems"
-      },
-      {
-        "id": "trees-6",
-        "name": "Binary Search Tree"
-      },
-      {
-        "id": "trees-7",
-        "name": "Tree Construction"
-      },
-      {
-        "id": "trees-8",
-        "name": "Lowest Common Ancestor"
-      },
-      {
-        "id": "trees-9",
-        "name": "Advanced Tree Problems"
-      }
-    ]
+  {
+    "id": "trees-1",
+    "name": "Tree Traversals"
+  },
+  {
+    "id": "trees-2",
+    "name": "Binary Tree Basics"
+  },
+  {
+    "id": "trees-3",
+    "name": "Tree Properties"
+  },
+  {
+    "id": "trees-4",
+    "name": "Tree Views"
+  },
+  {
+    "id": "trees-5",
+    "name": "Tree Path Problems"
+  },
+  {
+    "id": "trees-6",
+    "name": "Binary Search Tree"
+  },
+  {
+    "id": "trees-7",
+    "name": "BST Ordering & Kth Problems"
+  },
+  {
+    "id": "trees-8",
+    "name": "Lowest Common Ancestor"
+  },
+  {
+    "id": "trees-9",
+    "name": "Tree Construction"
+  },
+  {
+    "id": "trees-10",
+    "name": "Advanced Binary Trees"
+  },
+  {
+    "id": "trees-11",
+    "name": "Tree DP"
+  },
+  {
+    "id": "trees-12",
+    "name": "Trie"
+  }
+]
   },
   {
     "id": "binary-search",

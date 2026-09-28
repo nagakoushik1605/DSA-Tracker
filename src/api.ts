@@ -119,3 +119,9 @@ export async function createProblemsBulk(inputs: Array<BulkProblemInput & { publ
   const { error } = await supabase.from('problems').insert(rows)
   if (error) throw new Error(error.message)
 }
+
+export async function deleteProblemsByTopic(topicId: string) {
+  if (!supabase) throw new Error('Supabase is not configured.')
+  const { error } = await supabase.from('problems').delete().eq('topic_id', topicId)
+  if (error) throw new Error(error.message)
+}

@@ -82,7 +82,7 @@ function clean(value: string | null | undefined) {
 }
 
 function xmlText(el: Element) {
-  return clean(Array.from(el.querySelectorAll('t')).map(t => t.textContent ?? '').join(''))
+  return clean(Array.from(el.getElementsByTagName('t')).filter(t => t.parentElement?.localName !== 'rPh').map(t => t.textContent ?? '').join(''))
 }
 
 function parseSharedStrings(xml: string) {
@@ -140,8 +140,11 @@ export async function readExcelProblems(file: File): Promise<ExcelProblemRow[]> 
     ? parseSharedStrings(await readZipEntry(bytes, byName.get('xl/sharedStrings.xml')!))
     : []
 
-  const sheetEntry = byName.get('xl/worksheets/sheet1.xml')
-  if (!sheetEntry) throw new Error('The Excel workbook must contain a first worksheet.')
+  let sheetEntry = byName.get('xl/worksheets/sheet1.xml')
+  if (!sheetEntry) {
+    sheetEntry = entries.filter(e => /^xl\/worksheets\/[^/]+\.xml$/i.test(e.name)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))[0]
+  }
+  if (!sheetEntry) throw new Error('The Excel workbook must contain a worksheet.')
 
   const rows = parseSheet(await readZipEntry(bytes, sheetEntry), shared)
   if (!rows.length) return []

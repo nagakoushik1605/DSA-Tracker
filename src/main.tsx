@@ -4,7 +4,7 @@ import { Search, X } from 'lucide-react'
 import { topics, type Difficulty, type Problem, type Progress } from './data'
 import { addAttempt, markRevision, toggleSolved } from './progress'
 import { changePassword, isSupabaseConfigured, listenForAuthChanges, loginAdmin, logoutAdmin, restoreAdminSession, type AppUser } from './auth'
-import { createProblemsBulk, deleteProblem, fetchProblems, updateProblemPublished } from './api'
+import { createProblemsBulk, deleteProblem, deleteProblemsByTopic, fetchProblems, updateProblemPublished } from './api'
 import { clearProgress, loadProgress, saveProgress } from './storage'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
@@ -268,6 +268,14 @@ function PublicTracker({ problems, loading, setupError, onAdmin, onRefresh }: {
   )
 }
 
+function normalizeImportance(value: string): 'Essential' | 'Important' | 'Practice' {
+  const v = value.trim().toLowerCase()
+  if (!v) return 'Important'
+  if (/(essential|must|critical|core|high|top|very)/.test(v)) return 'Essential'
+  if (/(practice|optional|low|extra|bonus|nice|good to)/.test(v)) return 'Practice'
+  return 'Important'
+}
+
 function AdminConsole({ admin, problems, setProblems, onLogout }: {
   admin: AppUser; problems: Problem[]; setProblems: React.Dispatch<React.SetStateAction<Problem[]>>; onLogout: () => void
 }) {
@@ -277,13 +285,15 @@ function AdminConsole({ admin, problems, setProblems, onLogout }: {
   const [busy, setBusy] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [uploadErrors, setUploadErrors] = useState<string[]>([])
 
-  const visible = problems.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
-  const showToast = (m: string) => { setToast(m); window.setTimeout(() => setToast(null), 3000) }
+  const visible = problems.filter(p => p.topicId === topicId && p.title.toLowerCase().includes(search.toLowerCase()))
+  const showToast = (m: string) => { setToast(m); window.setTimeout(() => setToast(null), 5000) }
 
   const uploadExcel = async (file: File) => {
     setBusy(true)
     setFileName(file.name)
+    setUploadErrors([])
     try {
       const { readExcelProblems } = await import('./excel')
       const rows = await readExcelProblems(file)
@@ -311,17 +321,14 @@ function AdminConsole({ admin, problems, setProblems, onLogout }: {
           return
         }
 
-        const difficulty = row.difficulty.trim() as Difficulty
-        if (!['Easy', 'Medium', 'Hard'].includes(difficulty)) {
+        const difficultyRaw = row.difficulty.trim().toLowerCase()
+        const difficulty = (difficultyRaw.startsWith('e') ? 'Easy' : difficultyRaw.startsWith('m') ? 'Medium' : difficultyRaw.startsWith('h') ? 'Hard' : '') as Difficulty
+        if (!difficulty) {
           errors.push(`Row ${line}: Difficulty must be Easy, Medium, or Hard.`)
           return
         }
 
-        const importance = (row.importance.trim() || 'Important') as 'Essential' | 'Important' | 'Practice'
-        if (!['Essential', 'Important', 'Practice'].includes(importance)) {
-          errors.push(`Row ${line}: Importance must be Essential, Important, or Practice.`)
-          return
-        }
+        const importance = normalizeImportance(row.importance)
 
         const url = row.url.trim() || leetcodeUrl(title)
         if (existingTitles.has(title.toLowerCase())) {
@@ -355,12 +362,31 @@ function AdminConsole({ admin, problems, setProblems, onLogout }: {
         existingUrls.add(url.toLowerCase())
       })
 
-      if (errors.length) throw new Error(errors.slice(0, 8).join(' ') + (errors.length > 8 ? ` + ${errors.length - 8} more errors.` : ''))
+      if (errors.length) { setUploadErrors(errors); throw new Error(`Upload cancelled: ${errors.length} row(s) have problems. See the list below.`) }
       await createProblemsBulk(newProblems.map(p => ({ ...p, published: p.published !== false })))
       setProblems(prev => [...prev, ...newProblems])
       showToast(`${newProblems.length} problems uploaded to ${topic.name}`)
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Could not upload Excel file')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const removeAll = async () => {
+    const topic = topics.find(t => t.id === topicId) ?? topics[0]
+    const count = problems.filter(p => p.topicId === topicId).length
+    if (!count) { showToast('No problems to remove for this topic.'); return }
+    if (!window.confirm(`Delete ALL ${count} problems under "${topic.name}"? Student progress on them will also be removed. This cannot be undone.`)) return
+    setBusy(true)
+    try {
+      await deleteProblemsByTopic(topicId)
+      setProblems(prev => prev.filter(x => x.topicId !== topicId))
+      setUploadErrors([])
+      setFileName('')
+      showToast(`All ${count} problems removed from ${topic.name}`)
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not remove problems')
     } finally {
       setBusy(false)
     }
@@ -417,6 +443,12 @@ function AdminConsole({ admin, problems, setProblems, onLogout }: {
             onTopicChange={setTopicId}
             onFileChange={onFileChange}
           />
+          {uploadErrors.length > 0 && (
+            <div className="upload-errors">
+              <strong>{uploadErrors.length} row(s) need fixing — nothing was uploaded:</strong>
+              <ul>{uploadErrors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+            </div>
+          )}
         </section>
 
         <AdminProblemTable
@@ -426,6 +458,8 @@ function AdminConsole({ admin, problems, setProblems, onLogout }: {
           onSearchChange={setSearch}
           onTogglePublished={togglePublished}
           onDelete={remove}
+          onDeleteAll={removeAll}
+          busy={busy}
         />
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}
